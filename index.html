@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ربات‌ساز ری‌اکشن | پنل حرفه‌ای</title>
+  
+  <!-- فونت و استایل‌ها -->
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  
+  <style>
+    * {
+      font-family: 'Vazirmatn', sans-serif;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 15px;
+      background: #f8fafc;
+      border-radius: 20px;
+    }
+
+    .emoji-item {
+      font-size: 2.2rem;
+      padding: 12px;
+      cursor: pointer;
+      border-radius: 16px;
+      transition: all 0.2s;
+      text-align: center;
+      background: white;
+      border: 2px solid #e2e8f0;
+      user-select: none;
+    }
+
+    .emoji-item:hover {
+      background: #3b82f6;
+      color: white;
+      transform: scale(1.1);
+      border-color: #1e40af;
+    }
+
+    .emoji-item.selected {
+      background: #3b82f6;
+      color: white;
+      border-color: #1e3a8a;
+      transform: scale(1.05);
+    }
+
+    .bot-card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .bot-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 30px rgba(0,0,0,0.1);
+      border-color: #3b82f6;
+    }
+
+    .tab-btn {
+      position: relative;
+      padding: 12px 24px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .tab-btn.active {
+      color: #3b82f6;
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: #3b82f6;
+      border-radius: 3px 3px 0 0;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #1e293b;
+      color: white;
+      padding: 16px 30px;
+      border-radius: 50px;
+      font-size: 14px;
+      z-index: 9999;
+      animation: slideIn 0.3s ease;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* اسکرول بار زیبا */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8">
+
+  <!-- تواست نوتیفیکیشن -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- کانتینر اصلی -->
+  <div class="max-w-7xl mx-auto">
+    
+    <!-- هدر -->
+    <div class="glass-card p-8 mb-8 text-center">
+      <div class="inline-block p-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-6">
+        <span class="text-6xl">🤖</span>
+      </div>
+      <h1 class="text-5xl font-black text-gray-800 mb-4">
+        ربات‌ساز ری‌اکشن
+      </h1>
+      <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+        پیشرفته‌ترین ربات‌ساز تلگرام | تشخیص ویدیو | ری‌اکشن هوشمند
+      </p>
+      
+      <!-- آمار آنلاین -->
+      <div class="flex justify-center gap-8 mt-8">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-blue-600" id="botsCount">۰</div>
+          <div class="text-sm text-gray-500">ربات فعال</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold text-green-600">۱۰۰٪</div>
+          <div class="text-sm text-gray-500">آپتایم</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold text-purple-600">۲۴/۷</div>
+          <div class="text-sm text-gray-500">پشتیبانی</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- دکمه ساخت ربات -->
+    <div class="glass-card p-8 mb-8 text-center">
+      <button onclick="showCreateForm()" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-6 rounded-2xl text-2xl font-bold hover:from-blue-700 hover:to-purple-700 transition transform hover:scale-105 shadow-2xl">
+        ✨ ساخت ربات جدید
+      </button>
+      <p class="text-gray-500 mt-4">همین حالا ربات خودتو بساز و از قابلیت‌های پیشرفته استفاده کن</p>
+    </div>
+
+    <!-- فرم ساخت ربات -->
+    <div id="createForm" class="glass-card p-8 mb-8 hidden">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="text-3xl">🔑</span>
+        <h2 class="text-2xl font-bold text-gray-800">ایجاد ربات جدید</h2>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-gray-700 font-bold mb-2">🤖 توکن ربات</label>
+          <input type="text" id="botToken" placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz" 
+                 class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-left text-lg">
+          <p class="text-sm text-gray-500 mt-2">از @BotFather دریافت کن</p>
+        </div>
+        
+        <div>
+          <label class="block text-gray-700 font-bold mb-2">👤 آیدی ادمین</label>
+          <input type="number" id="ownerId" placeholder="123456789" 
+                 class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg">
+          <p class="text-sm text-gray-500 mt-2">از @userinfobot دریافت کن</p>
+        </div>
+      </div>
+
+      <div class="bg-blue-50 border border-blue-200 rounded-2xl p-5 mt-6">
+        <div class="flex items-start gap-3">
+          <span class="text-blue-600 text-xl">📌</span>
+          <div>
+            <p class="text-blue-800 font-bold">راهنمای سریع:</p>
+            <p class="text-blue-700 text-sm">بعد از ساخت ربات، دستور وب‌هوک برات نمایش داده میشه</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4 mt-8">
+        <button onclick="createBot()" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition shadow-lg">
+          🚀 ساخت ربات
+        </button>
+        <button onclick="hideCreateForm()" class="px-6 py-4 bg-gray-200 text-gray-700 rounded-2xl font-bold hover:bg-gray-300 transition">
+          انصراف
+        </button>
+      </div>
+    </div>
+
+    <!-- پنل مدیریت -->
+    <div id="dashboard" class="glass-card p-8 hidden">
+      <div class="flex justify-between items-center mb-8">
+        <div>
+          <h2 class="text-3xl font-bold text-gray-800">پنل مدیریت</h2>
+          <p class="text-gray-600 mt-2" id="adminName">مدیریت ربات‌های شما</p>
+        </div>
+        <button onclick="logout()" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition">
+          🚪 خروج
+        </button>
+      </div>
+
+      <!-- لیست ربات‌ها -->
+      <div id="botsList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
+
+      <!-- پنل تنظیمات ربات -->
+      <div id="botSettings" class="hidden">
+        <div class="border-t border-gray-200 pt-8 mt-8">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-bold text-gray-800" id="selectedBotName">تنظیمات ربات</h3>
+            <button onclick="closeBotSettings()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+          </div>
+
+          <!-- تب‌ها -->
+          <div class="border-b border-gray-200 mb-6">
+            <nav class="flex gap-2 overflow-x-auto">
+              <button class="tab-btn active" onclick="switchTab('plugins')">🔌 افزونه‌ها</button>
+              <button class="tab-btn" onclick="switchTab('auto')">⚡ ری‌اکشن خودکار</button>
+              <button class="tab-btn" onclick="switchTab('custom')">🎯 ری‌اکشن کاستوم</button>
+              <button class="tab-btn" onclick="switchTab('webhook')">🌐 وب‌هوک</button>
+            </nav>
+          </div>
+
+          <!-- تب افزونه‌ها -->
+          <div id="tab-plugins" class="tab-content space-y-4">
+            <div class="flex items-center justify-between p-5 bg-gray-50 rounded-2xl">
+              <div>
+                <h4 class="font-bold text-lg">⚡ ری‌اکشن خودکار</h4>
+                <p class="text-sm text-gray-600">تشخیص متن و ویدیو + ری‌اکشن هوشمند</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="plugin-auto" class="sr-only peer plugin-toggle" data-plugin="auto_reaction">
+                <div class="w-14 h-7 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:right-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div class="flex items-center justify-between p-5 bg-gray-50 rounded-2xl">
+              <div>
+                <h4 class="font-bold text-lg">🎯 ری‌اکشن کاستوم</h4>
+                <p class="text-sm text-gray-600">ری‌اکشن رندوم از لیست شخصی شما</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="plugin-custom" class="sr-only peer plugin-toggle" data-plugin="custom_reaction">
+                <div class="w-14 h-7 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:right-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- تب ری‌اکشن خودکار -->
+          <div id="tab-auto" class="tab-content hidden">
+            <div class="mb-6">
+              <h4 class="font-bold text-lg mb-4">🎬 پردازش ویدیو</h4>
+              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-5">
+                <p class="text-blue-900">✅ تشخیص خودکار احساس ویدیو</p>
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                  <div class="flex items-center gap-2"><span class="text-2xl">😢😭💔</span> <span>غمگین</span></div>
+                  <div class="flex items-center gap-2"><span class="text-2xl">🤣😂🎉</span> <span>خنده‌دار</span></div>
+                  <div class="flex items-center gap-2"><span class="text-2xl">👍👌🆗</span> <span>عادی</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 class="font-bold text-lg mb-4">📝 کلمات کلیدی</h4>
+              <div class="flex gap-3 mb-4">
+                <input type="text" id="newKeyword" placeholder="کلمه مورد نظر" class="flex-1 px-4 py-3 border rounded-2xl">
+                <input type="text" id="newEmoji" placeholder="ایموجی" maxlength="2" class="w-24 px-4 py-3 border rounded-2xl text-center text-2xl">
+                <button onclick="addKeyword()" class="bg-blue-600 text-white px-6 py-3 rounded-2xl hover:bg-blue-700">➕</button>
+              </div>
+              <div id="keywordsList" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            </div>
+          </div>
+
+          <!-- تب ری‌اکشن کاستوم -->
+          <div id="tab-custom" class="tab-content hidden">
+            <h4 class="font-bold text-lg mb-4">📋 ایموجی‌های مورد علاقه</h4>
+            <div id="emojiGrid" class="emoji-grid"></div>
+            <div class="flex gap-3 mt-6">
+              <button onclick="saveCustomEmojis()" class="flex-1 bg-green-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-green-700">
+                💾 ذخیره
+              </button>
+              <button onclick="selectAllEmojis()" class="px-6 py-4 bg-gray-200 rounded-2xl hover:bg-gray-300">انتخاب همه</button>
+              <button onclick="deselectAllEmojis()" class="px-6 py-4 bg-gray-200 rounded-2xl hover:bg-gray-300">پاک کردن</button>
+            </div>
+          </div>
+
+          <!-- تب وب‌هوک -->
+          <div id="tab-webhook" class="tab-content hidden">
+            <div class="bg-gray-900 text-white p-6 rounded-2xl">
+              <p class="text-sm mb-2">📋 دستور ست کردن وب‌هوک:</p>
+              <code id="webhookCommand" class="block bg-gray-800 p-4 rounded-xl text-sm ltr overflow-x-auto"></code>
+              <button onclick="copyWebhook()" class="mt-4 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700">
+                📋 کپی دستور
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- صفحه لاگین -->
+    <div id="loginSection" class="glass-card p-8 max-w-md mx-auto">
+      <div class="text-center mb-8">
+        <span class="text-5xl">🔐</span>
+        <h2 class="text-3xl font-bold text-gray-800 mt-4">ورود به پنل</h2>
+        <p class="text-gray-600 mt-2">آیدی عددی خود را وارد کنید</p>
+      </div>
+
+      <input type="number" id="loginOwnerId" placeholder="123456789" 
+             class="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl mb-4 text-center text-lg">
+
+      <button onclick="login()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 rounded-2xl text-xl font-bold hover:from-blue-700 hover:to-purple-700 transition">
+        🚀 ورود به پنل
+      </button>
+
+      <p class="text-sm text-gray-500 mt-4 text-center">
+        آیدی خود را از @userinfobot دریافت کنید
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ==================== دیتا سنتر ====================
+    const DEFAULT_EMOJIS = ['👍','👎','❤️','🔥','🥰','👏','😁','🤔','🤯','😱','🤬','😢','🎉','🤩','🤮','💩','🙏','👌','🕊','🤡','🥱','🥴','😍','🐳','❤‍🔥','🌚','🌭','💯','🤣','⚡','🍌','🏆','💔','🤨','😐','🍓','🍾','💋','🖕','😈','😴','😭','🤓','👻','👨‍💻','👀','🎃','🙈','😇','😨','🤝','✍','🤗','🫡','🎅','🎄','☃','💅','🤪','🗿','🆒','💘','🙉','🦄','😘','💊','🙊','😎','👾','🤷‍♂','🤷','🤷‍♀','😡'];
+
+    let BOTS_DB = [];
+    let CURRENT_USER = null;
+    let SELECTED_BOT = null;
+
+    // ==================== localStorage ====================
+    function loadDB() {
+      const saved = localStorage.getItem('reaction_bots_db');
+      if (saved) {
+        BOTS_DB = JSON.parse(saved);
+      }
+      
+      const user = localStorage.getItem('reaction_current_user');
+      if (user) {
+        CURRENT_USER = parseInt(user);
+        showDashboard();
+      }
+    }
+
+    function saveDB() {
+      localStorage.setItem('reaction_bots_db', JSON.stringify(BOTS_DB));
+    }
+
+    // ==================== تابع نمایش ====================
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = `toast ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function showCreateForm() {
+      document.getElementById('createForm').classList.remove('hidden');
+    }
+
+    function hideCreateForm() {
+      document.getElementById('createForm').classList.add('hidden');
+    }
+
+    function login() {
+      const ownerId = document.getElementById('loginOwnerId').value.trim();
+      if (!ownerId) {
+        showToast('آیدی را وارد کنید', 'error');
+        return;
+      }
+      CURRENT_USER = parseInt(ownerId);
+      localStorage.setItem('reaction_current_user', CURRENT_USER);
+      showDashboard();
+    }
+
+    function logout() {
+      CURRENT_USER = null;
+      localStorage.removeItem('reaction_current_user');
+      document.getElementById('dashboard').classList.add('hidden');
+      document.getElementById('loginSection').classList.remove('hidden');
+    }
+
+    function showDashboard() {
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('adminName').innerHTML = `👋 خوش اومدی! آیدی: ${CURRENT_USER}`;
+      loadBotsList();
+    }
+
+    // ==================== ساخت ربات جدید ====================
+    async function createBot() {
+      const token = document.getElementById('botToken').value.trim();
+      const ownerId = document.getElementById('ownerId').value.trim();
+
+      if (!token || !ownerId) {
+        showToast('توکن و آیدی را وارد کنید', 'error');
+        return;
+      }
+
+      showToast('در حال بررسی توکن...');
+
+      try {
+        // تست توکن
+        const response = await axios.get(`https://api.telegram.org/bot${token}/getMe`);
+        
+        if (response.data.ok) {
+          const botInfo = response.data.result;
+          
+          // ذخیره در دیتابیس محلی
+          const newBot = {
+            id: Date.now(),
+            token: token,
+            username: botInfo.username,
+            owner_id: parseInt(ownerId),
+            is_active: true,
+            created_at: new Date().toISOString(),
+            custom_emojis: ['👍', '❤️', '🔥', '😂', '😢', '🎉'],
+            auto_reactions: [],
+            plugins: {
+              auto_reaction: true,
+              custom_reaction: true
+            }
+          };
+          
+          BOTS_DB.push(newBot);
+          saveDB();
+          
+          showToast(`✅ ربات @${botInfo.username} با موفقیت ساخته شد`);
+          hideCreateForm();
+          document.getElementById('botToken').value = '';
+          document.getElementById('ownerId').value = '';
+          
+          if (CURRENT_USER == ownerId) {
+            loadBotsList();
+          }
+          
+          // آپدیت شمارنده
+          updateStats();
+        }
+      } catch (error) {
+        showToast('❌ توکن نامعتبر است', 'error');
+      }
+    }
+
+    // ==================== لیست ربات‌ها ====================
+    function loadBotsList() {
+      const userBots = BOTS_DB.filter(bot => bot.owner_id === CURRENT_USER);
+      const container = document.getElementById('botsList');
+      
+      document.getElementById('botsCount').innerHTML = userBots.length;
+      
+      if (userBots.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-12 bg-gray-50 rounded-2xl">
+            <span class="text-6xl block mb-4">🤖</span>
+            <p class="text-gray-500 text-xl">هنوز رباتی نساختی!</p>
+            <button onclick="showCreateForm()" class="mt-4 bg-blue-600 text-white px-6 py-3 rounded-xl">
+              ساخت ربات جدید
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = userBots.reverse().map(bot => `
+        <div class="bot-card" onclick="openBotSettings('${bot.token}')">
+          <div class="flex items-center gap-4 mb-4">
+            <span class="text-4xl">${bot.is_active ? '🤖' : '💤'}</span>
+            <div>
+              <h3 class="font-bold text-xl">@${bot.username}</h3>
+              <p class="text-sm text-gray-500">${new Date(bot.created_at).toLocaleDateString('fa-IR')}</p>
+            </div>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="px-3 py-1 ${bot.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} rounded-full text-sm">
+              ${bot.is_active ? '🟢 فعال' : '⚪ غیرفعال'}
+            </span>
+            <span class="text-blue-600 text-sm">مدیریت ←</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ==================== تنظیمات ربات ====================
+    function openBotSettings(token) {
+      SELECTED_BOT = BOTS_DB.find(b => b.token === token);
+      if (!SELECTED_BOT) return;
+      
+      document.getElementById('botSettings').classList.remove('hidden');
+      document.getElementById('selectedBotName').innerHTML = `تنظیمات @${SELECTED_BOT.username}`;
+      
+      // ست کردن وضعیت افزونه‌ها
+      document.getElementById('plugin-auto').checked = SELECTED_BOT.plugins?.auto_reaction ?? true;
+      document.getElementById('plugin-custom').checked = SELECTED_BOT.plugins?.custom_reaction ?? true;
+      
+      // بارگذاری کلمات کلیدی
+      loadKeywordsList();
+      
+      // بارگذاری ایموجی‌ها
+      loadEmojiGrid(SELECTED_BOT.custom_emojis || []);
+      
+      // ست کردن دستور وب‌هوک
+      const domain = window.location.hostname === 'localhost' ? 'https://your-domain.com' : window.location.origin;
+      document.getElementById('webhookCommand').innerHTML = 
+        `curl -F "url=${domain}/webhook/${token}" https://api.telegram.org/bot${token}/setWebhook`;
+    }
+
+    function closeBotSettings() {
+      document.getElementById('botSettings').classList.add('hidden');
+      SELECTED_BOT = null;
+    }
+
+    // ==================== مدیریت تب‌ها ====================
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+      });
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+    }
+
+    // ==================== ری‌اکشن کاستوم ====================
+    function loadEmojiGrid(selected = []) {
+      const grid = document.getElementById('emojiGrid');
+      grid.innerHTML = DEFAULT_EMOJIS.map(emoji => 
+        `<div class="emoji-item ${selected.includes(emoji) ? 'selected' : ''}" onclick="toggleEmoji(this)">${emoji}</div>`
+      ).join('');
+    }
+
+    function toggleEmoji(element) {
+      element.classList.toggle('selected');
+    }
+
+    function selectAllEmojis() {
+      document.querySelectorAll('.emoji-item').forEach(el => {
+        el.classList.add('selected');
+      });
+    }
+
+    function deselectAllEmojis() {
+      document.querySelectorAll('.emoji-item').forEach(el => {
+        el.classList.remove('selected');
+      });
+    }
+
+    function saveCustomEmojis() {
+      if (!SELECTED_BOT) return;
+      
+      const selected = Array.from(document.querySelectorAll('.emoji-item.selected'))
+        .map(el => el.textContent);
+      
+      SELECTED_BOT.custom_emojis = selected;
+      
+      // آپدیت در دیتابیس
+      const index = BOTS_DB.findIndex(b => b.token === SELECTED_BOT.token);
+      if (index !== -1) {
+        BOTS_DB[index] = SELECTED_BOT;
+        saveDB();
+      }
+      
+      showToast('✅ ایموجی‌ها ذخیره شدند');
+    }
+
+    // ==================== کلمات کلیدی ====================
+    function loadKeywordsList() {
+      const container = document.getElementById('keywordsList');
+      const keywords = SELECTED_BOT.auto_reactions || [];
+      
+      if (keywords.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500 py-8">📝 هنوز کلمه کلیدی اضافه نکردی</p>';
+        return;
+      }
+      
+      container.innerHTML = keywords.map((k, index) => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${k.emoji}</span>
+            <span class="font-bold">${k.keyword}</span>
+          </div>
+          <button onclick="deleteKeyword(${index})" class="text-red-500 hover:text-red-700">
+            🗑️
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addKeyword() {
+      if (!SELECTED_BOT) return;
+      
+      const keyword = document.getElementById('newKeyword').value.trim();
+      const emoji = document.getElementById('newEmoji').value.trim();
+      
+      if (!keyword || !emoji) {
+        showToast('کلمه و ایموجی را وارد کن', 'error');
+        return;
+      }
+      
+      if (!SELECTED_BOT.auto_reactions) {
+        SELECTED_BOT.auto_reactions = [];
+      }
+      
+      SELECTED_BOT.auto_reactions.push({ keyword, emoji });
+      
+      // آپدیت دیتابیس
+      const index = BOTS_DB.findIndex(b => b.token === SELECTED_BOT.token);
+      if (index !== -1) {
+        BOTS_DB[index] = SELECTED_BOT;
+        saveDB();
+      }
+      
+      document.getElementById('newKeyword').value = '';
+      document.getElementById('newEmoji').value = '';
+      loadKeywordsList();
+      showToast('✅ کلمه کلیدی اضافه شد');
+    }
+
+    function deleteKeyword(index) {
+      if (!SELECTED_BOT) return;
+      
+      SELECTED_BOT.auto_reactions.splice(index, 1);
+      
+      // آپدیت دیتابیس
+      const botIndex = BOTS_DB.findIndex(b => b.token === SELECTED_BOT.token);
+      if (botIndex !== -1) {
+        BOTS_DB[botIndex] = SELECTED_BOT;
+        saveDB();
+      }
+      
+      loadKeywordsList();
+      showToast('✅ کلمه کلیدی حذف شد');
+    }
+
+    // ==================== افزونه‌ها ====================
+    document.addEventListener('change', function(e) {
+      if (e.target.classList.contains('plugin-toggle')) {
+        if (!SELECTED_BOT) return;
+        
+        const plugin = e.target.dataset.plugin;
+        const enabled = e.target.checked;
+        
+        if (!SELECTED_BOT.plugins) SELECTED_BOT.plugins = {};
+        SELECTED_BOT.plugins[plugin] = enabled;
+        
+        // آپدیت دیتابیس
+        const index = BOTS_DB.findIndex(b => b.token === SELECTED_BOT.token);
+        if (index !== -1) {
+          BOTS_DB[index] = SELECTED_BOT;
+          saveDB();
+        }
+        
+        showToast(`✅ افزونه ${enabled ? 'فعال' : 'غیرفعال'} شد`);
+      }
+    });
+
+    // ==================== کپی وب‌هوک ====================
+    function copyWebhook() {
+      const command = document.getElementById('webhookCommand').innerText;
+      navigator.clipboard.writeText(command);
+      showToast('✅ دستور کپی شد');
+    }
+
+    // ==================== آپدیت آمار ====================
+    function updateStats() {
+      document.getElementById('botsCount').innerHTML = BOTS_DB.length;
+    }
+
+    // ==================== لود اولیه ====================
+    loadDB();
+    updateStats();
+  </script>
+</body>
+</html>
